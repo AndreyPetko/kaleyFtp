@@ -1,0 +1,26 @@
+.main-item{
+	width: 33%;
+}
+.category-item {
+	width: 50%;
+}
+	.header-block2-line-1{
+		display: none;
+	}
+	.header-content-block-1 {
+		margin-right: 20px;
+	}
+	.header-line-element-text {
+    font-size: 12px;
+}
+.header-block2-line-2 {
+	padding: 10px;
+	margin-right: 5px;
+	margin-top: 50px;
+	}
+	.block2-line2-img {
+     margin-left: 3px;
+ }
+ .block2-line2-text {
+    margin-left: 10px;
+}

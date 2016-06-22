@@ -1,0 +1,34 @@
+.site-logo {
+    width: 40%;
+}
+.site-logo img {
+	max-width: 100%;
+	}
+	.media-del-1{
+	display: none;
+}
+
+    .header-items-line-2 {
+    margin-top: 10px;
+}
+ .header-line-search{
+    	width: 150px;
+    }
+    .search-icon {
+    margin-left: 110px;
+}
+.line-ml-1 {
+    margin-left: 10px;
+}
+.header-line-search input::-webkit-input-placeholder {
+    text-indent: 20px;
+    color: white;
+}
+
+.header-line-search input::-moz-placeholder {
+    text-indent: 20px;
+    color: white;
+}
+.header-item-text {
+    width: 80px;
+    }
