@@ -111,7 +111,7 @@ return [
     'providers' => [
 
         // Включить дебаг бар
-        // Barryvdh\Debugbar\ServiceProvider::class,
+        Barryvdh\Debugbar\ServiceProvider::class,
 
         /*
          * Laravel Framework Service Providers...

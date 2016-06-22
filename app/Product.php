@@ -9,6 +9,7 @@ use Cookie;
 use Illuminate\Pagination\Paginator;
 use App\Attribute;
 use Auth;
+use Cache;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -222,6 +223,18 @@ class Product extends Model
 	}
 
 
+	public static function getFirstImages($products) {
+		foreach ($products as $product) {
+			foreach ($product->images as $image) {
+				$product->image = $image->url;
+				break;
+			}
+		}
+
+		return $products;
+	}
+
+
 	public static function getRecommended($limit = 0, $limit2 = 0) {
 		if(self::isWholesaler()) {
 			if($limit2 != 0) {
@@ -258,28 +271,36 @@ class Product extends Model
 	}
 
 	public static function getNew($limit = 0, $limit2 = 0) {
-		if(self::isWholesaler()) {
-			if($limit2 != 0) {
-				$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id WHERE active_wholesale = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit, :limit2', array($limit, $limit2));
-			} else {
-				if($limit != 0) {
-					$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id = images.product_id WHERE active_wholesale = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit', array($limit));
-				} else {
-					$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id  WHERE active_wholesale = 1 GROUP BY (products.id)');
-				}
-			}
-		} else {
-			if($limit2 != 0) {
-				$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id WHERE active = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit, :limit2', array($limit, $limit2));
-			} else {
-				if($limit != 0) {
-					$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id = images.product_id WHERE active = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit', array($limit));
-				} else {
-					$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id  WHERE active = 1 GROUP BY (products.id)');
-				}
-			}
+		// if(self::isWholesaler()) {
+		// 	if($limit2 != 0) {
+		// 		$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id WHERE active_wholesale = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit, :limit2', array($limit, $limit2));
+		// 	} else {
+		// 		if($limit != 0) {
+		// 			$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id = images.product_id WHERE active_wholesale = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit', array($limit));
+		// 		} else {
+		// 			$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id  WHERE active_wholesale = 1 GROUP BY (products.id)');
+		// 		}
+		// 	}
+		// } else {
+		// 	if($limit2 != 0) {
+		// 		$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id WHERE active = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit, :limit2', array($limit, $limit2));
+		// 	} else {
+		// 		if($limit != 0) {
+		// 			$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id = images.product_id WHERE active = 1  GROUP BY (products.id) ORDER BY products.id DESC LIMIT :limit', array($limit));
+		// 		} else {
+		// 			$recProducts = DB::select('SELECT products.*, images.url as image FROM products LEFT JOIN images ON products.id =  images.product_id  WHERE active = 1 GROUP BY (products.id)');
+		// 		}
+		// 	}
 
+		// }
+
+
+		if(self::isWholesaler()) {
+			$recProducts = self::where('active_wholesale', 1)->skip($limit2)->take($limit)->get();
+		} else {
+			$recProducts = self::where('active', 1)->skip($limit2)->take($limit)->get();
 		}
+
 
 		return $recProducts;
 	}
@@ -314,14 +335,13 @@ class Product extends Model
 
 
 	public static function getBySessionBrendFilter($brendUrl, $returnType = 1) {
-		$query = DB::table('products')->leftjoin('images', 'products.id', '=', 'images.product_id')
+		$query = self::where('brends.url', $brendUrl)
 		->leftjoin('product_subcat', 'products.id', '=', 'product_subcat.product_id')
 		->leftjoin('categories', 'products.category_id', '=', 'categories.id')
 		->leftjoin('brends', 'products.brend_id', '=', 'brends.id')
 		->leftjoin('product_attrs_value', 'product_attrs_value.product_id', '=', 'products.id')
 		->leftjoin('attributes', 'product_attrs_value.attribute_id', '=', 'attributes.id')
-		->select('products.*', 'images.url as image')
-		->where('brends.url', $brendUrl)
+		->select('products.name', 'products.price', 'products.id', 'products.wholesale_price', 'products.quantity','products.url')
 		->groupBy('products.id');
 
 		if(!empty(Session::get('brendFilter'))) {
@@ -379,7 +399,6 @@ class Product extends Model
 
 
 		if(Session::get('brendsShowCount')) {
-
 			$products = $query->paginate((int)Session::get('brendsShowCount'));
 		} else {
 			$products = $query->paginate(9);
@@ -402,6 +421,13 @@ class Product extends Model
 			}
 		}
 
+
+		foreach ($products as $product) {
+			foreach ($product->images as $image) {
+				$product->image = $image->url;
+				break;
+			}
+		}
 
 		$products = self::setWholesalePrice($products, 1);
 
@@ -431,15 +457,16 @@ class Product extends Model
 			});
 		}
 
+		// $products = Cache::remember('products' . $currentPage, 10, function() use ($categoryUrl)
+		// {
 
-
-		$query = DB::table('products')->leftjoin('images', 'products.id', '=', 'images.product_id')
+		$query = self::where('categories.url', $categoryUrl)
+		// ->leftjoin('images', 'products.id', '=', 'images.product_id')
 		->leftjoin('product_subcat', 'products.id', '=', 'product_subcat.product_id')
 		->leftjoin('categories', 'products.category_id', '=', 'categories.id')
 		->leftjoin('product_attrs_value', 'product_attrs_value.product_id', '=', 'products.id')
 		->leftjoin('attributes', 'product_attrs_value.attribute_id', '=', 'attributes.id')
-		->select('products.*', 'images.url as image')
-		->where('categories.url', $categoryUrl)
+		->select('products.name', 'products.price', 'products.id', 'products.wholesale_price', 'products.quantity','products.url')
 		->groupBy('products.id');
 
 		if(Session::get('startPrice'))
@@ -500,12 +527,15 @@ class Product extends Model
 
 		}
 
+
 		if(Session::get('showCount')) {
 			$products = $query->paginate((int)Session::get('showCount'));
 		} else {
 			$products = $query->paginate(9);
 		}
 
+
+		// $products = $query->take(9)->get();
 
 		$products = Wishlist::setWishToProducts($products);
 
@@ -517,8 +547,17 @@ class Product extends Model
 
 		$products = self::setWholesalePrice($products, 1);
 
-		// $products = self::getActive($products);
 
+		foreach ($products as $product) {
+			foreach ($product->images as $image) {
+				$product->image = $image->url;
+				break;
+			}
+		}
+
+
+			// return $products;
+		// });
 
 		if($returnType == 1) {
 			$pagination = $products->render();

@@ -49,9 +49,18 @@ class HomeController extends Controller {
 		$data['mainSlides'] = Slide::getOrderMainSlides();
 		$data['recProducts'] = Product::getRecommended(4);
 		$data['newProducts'] = Product::getNew(4);
+
+		foreach ($data['newProducts'] as $product) {
+			if($product->images) {
+				foreach ($product->images as $image) {
+					$product->image = $image->url;
+					break;
+				}
+			}
+
+		}
+
 		$data['brends'] = Brend::getItemsWithLogo();
-
-
 
 		$data['recProducts'] = Product::setWholesalePrice($data['recProducts'], 1);
 		$data['newProducts'] = Product::setWholesalePrice($data['newProducts'], 1);
@@ -61,9 +70,13 @@ class HomeController extends Controller {
 
 	public function getNewProducts() {
 		$products = Product::getNew(52);
-		
+
 		foreach ($products as $product) {
 			$product = Product::setWholesalePrice($product);
+			foreach ($product->images as $image) {
+				$product->image = $image->url;
+				break;
+			}
 		}
 
 		$breadcrumbs = ['/new-products' => 'Новинки'];
